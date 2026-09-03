@@ -1,6 +1,6 @@
 # FINANLOVE - AUDIT REPORT FASE 4.6
 
-Fecha: 2026-09-03  
+Fecha: 2026-09-03
 Estado auditado: working tree actual despues de Fase 4.6; no existe una raiz Git detectable para asociar un commit.
 
 ## 1. Alcance
@@ -26,77 +26,77 @@ No se borraron migraciones, no se creo `.env`, no se crearon cuentas ni se usaro
 
 ## 3. Tests ejecutados
 
-| Comando | Resultado | Evidencia |
-|---|---|---|
-| `python -m ruff check .` | PASS | Sin errores en 80 archivos backend. |
-| `python -m mypy .` | PASS | Sin errores en 80 archivos backend. |
-| `python -m pytest` | PASS | 14 passed, 1 skipped en la ultima ejecucion local. |
-| `python -m pytest --cov=app --cov-fail-under=60` | PASS | 61.10%/61.55% segun ejecucion; supera umbral 60%. |
-| `npm run lint` | PASS | Warning no bloqueante por TypeScript fuera del rango soportado por parser. |
-| `npm run typecheck` | PASS | TypeScript estricto compila. |
-| `npm test` | PASS | 2 tests frontend. |
-| `npm run build` | PASS | Vite genera bundle. |
-| `docker compose config --quiet` | PASS | Compose valido con variables efimeras. |
-| `docker compose build` | PASS | Imagenes backend/frontend construidas. |
-| `alembic upgrade head` en contenedor | PASS | Migraciones aplicadas en ejecucion controlada previa. |
-| PostgreSQL integration desde Windows | BLOCKED | `asyncpg` pierde conexion con el puerto publicado; no se confirma comportamiento financiero. |
-| PostgreSQL integration dentro de imagen runtime | BLOCKED | La imagen de produccion no incluye pytest y la ejecucion de test no pudo demostrar los casos. |
+| Comando                                          | Resultado | Evidencia                                                                                     |
+| ------------------------------------------------ | --------- | --------------------------------------------------------------------------------------------- |
+| `python -m ruff check .`                         | PASS      | Sin errores en 80 archivos backend.                                                           |
+| `python -m mypy .`                               | PASS      | Sin errores en 80 archivos backend.                                                           |
+| `python -m pytest`                               | PASS      | 14 passed, 1 skipped en la ultima ejecucion local.                                            |
+| `python -m pytest --cov=app --cov-fail-under=60` | PASS      | 61.10%/61.55% segun ejecucion; supera umbral 60%.                                             |
+| `npm run lint`                                   | PASS      | Warning no bloqueante por TypeScript fuera del rango soportado por parser.                    |
+| `npm run typecheck`                              | PASS      | TypeScript estricto compila.                                                                  |
+| `npm test`                                       | PASS      | 2 tests frontend.                                                                             |
+| `npm run build`                                  | PASS      | Vite genera bundle.                                                                           |
+| `docker compose config --quiet`                  | PASS      | Compose valido con variables efimeras.                                                        |
+| `docker compose build`                           | PASS      | Imagenes backend/frontend construidas.                                                        |
+| `alembic upgrade head` en contenedor             | PASS      | Migraciones aplicadas en ejecucion controlada previa.                                         |
+| PostgreSQL integration desde Windows             | BLOCKED   | `asyncpg` pierde conexion con el puerto publicado; no se confirma comportamiento financiero.  |
+| PostgreSQL integration dentro de imagen runtime  | BLOCKED   | La imagen de produccion no incluye pytest y la ejecucion de test no pudo demostrar los casos. |
 
 ## 4. Matriz
 
 Regla aplicada: PASS requiere implementacion y prueba demostrativa del comportamiento. BLOCKED indica que la prueba requerida no pudo ejecutarse en el entorno actual.
 
-| Requisito | Estado | Evidencia | Archivo | Linea | Test |
-|---|---|---|---|---:|---|
-| Unit of Work | PARTIAL | UoW existe y `get_db` lo usa | `src/backend/app/infrastructure/database.py` | 22-25 | Unit tests pasan; falta prueba de fallo HTTP multi-entidad |
-| Rollback financiero real | BLOCKED | Context manager hace rollback, pero no hay evidencia PostgreSQL financiera ejecutada | `src/backend/app/infrastructure/unit_of_work.py` | 7-16 | Integracion bloqueada |
-| Idempotency key persistente | PARTIAL | Tabla, unique y fingerprint SHA-256 | `src/backend/app/infrastructure/models/idempotency.py` | 8-24 | Tests unitarios; falta doble request PostgreSQL ejecutado |
-| Idempotencia atomica | PARTIAL | `pg_advisory_xact_lock` y `ON CONFLICT DO NOTHING` | `src/backend/app/infrastructure/repositories/idempotency.py` | 12-54 | No demostrada bajo concurrencia real |
-| Payload fingerprint | PARTIAL | Fingerprint canonico de payload | `src/backend/app/presentation/idempotency.py` | 1-10 | No hay prueba completa para todas las operaciones |
-| Misma key + payload distinto | PASS | Routers comparan fingerprint y devuelven 409 | `src/backend/app/presentation/transactions.py` | 31-38 | `test_http_postgres.py`, preparado; ejecucion PostgreSQL bloqueada |
-| Concurrencia de gastos | PARTIAL | `UPDATE ... current_balance + delta >= 0` | `src/backend/app/infrastructure/repositories/accounts.py` | 45-66 | No existe PASS: prueba PostgreSQL bloqueada |
-| Concurrencia de transferencias | BLOCKED | No hay prueba real ejecutada | `src/backend/app/application/transactions.py` | 45-62 | Falta prueba concurrente |
-| No saldo negativo | PARTIAL | Condicion SQL evita update invalido | `src/backend/app/infrastructure/repositories/accounts.py` | 53-64 | Unit tests; falta PostgreSQL concurrencia |
-| Registro/login | PARTIAL | Argon2, JWT, schemas y persistencia | `src/backend/app/presentation/auth.py` | 40-90 | Tests unitarios; HTTP DB bloqueado |
-| Refresh token | PARTIAL | Cookie HttpOnly, hash, expiracion y rotacion | `src/backend/app/presentation/auth.py` | 92-126 | Test HTTP preparado; PostgreSQL bloqueado |
-| Refresh reuse detection | PARTIAL | Token rotado queda revocado | `src/backend/app/infrastructure/repositories/tokens.py` | 25-58 | Test preparado; no ejecutado con DB real |
-| Logout server-side | PARTIAL | Revoca refresh y elimina cookie | `src/backend/app/presentation/auth.py` | 128-140 | Falta test HTTP real ejecutado |
-| CSRF refresh | PARTIAL | Valida Origin/Referer contra CORS | `src/backend/app/presentation/auth.py` | 22-32 | `test_phase46_security.py` cubre función; falta test de endpoint/DB |
-| Secretos produccion | PASS | Produccion rechaza secreto corto/conocido | `src/backend/app/core/config.py` | 20-31 | `test_phase46_security.py` |
-| Secretos Compose | PARTIAL | Compose exige variables, pero CI usa credenciales de servicio en YAML | `compose.yml` | 5-14 | Config valido; requiere política de secretos CI |
-| Ownership recurrencias | PARTIAL | Valida cuenta propia y activa | `src/backend/app/application/recurring.py` | 27-42 | Unit test; falta ownership HTTP PostgreSQL ejecutado |
-| Ownership cuentas | PARTIAL | Repositorio filtra owner | `src/backend/app/infrastructure/repositories/accounts.py` | 32-43 | Falta prueba HTTP ejecutada |
-| Ownership transacciones | PARTIAL | Cuenta origen se obtiene con owner autenticado | `src/backend/app/application/transactions.py` | 37-45 | Falta prueba HTTP ejecutada |
-| Ownership deudas/cuotas | PARTIAL | Debt se consulta por owner antes de cuotas | `src/backend/app/presentation/debts.py` | 54-93 | Falta modificar/pagar y prueba HTTP |
-| Aceptacion de prestamo | PARTIAL | Exige cuentas y actualiza ambos saldos/ledger | `src/backend/app/application/loans.py` | 91-175 | Falta PostgreSQL rollback/consistencia ejecutado |
-| Devolucion parcial | PARTIAL | Mueve fondos y crea ledger | `src/backend/app/application/loans.py` | 189-258 | Estado parcial explicito y prueba real faltan |
-| Devolucion completa | PARTIAL | Marca SETTLED cuando total aceptado iguala monto | `src/backend/app/application/loans.py` | 279-292 | Falta prueba completa, saldo y retry |
-| Ledger préstamo/devolucion | PARTIAL | Crea dos transacciones por movimiento | `src/backend/app/application/loans.py` | 130-175, 240-278 | No probado con DB real |
-| Estados income/expense | NOT IMPLEMENTED | Solo existe `TransactionType` | `src/backend/app/domain/transaction.py` | 1-21 | No existen estados EXPECTED/RECEIVED/PENDING/PAID |
-| Deudas/cuotas | PARTIAL | Modelos, repositorio y endpoints minimos | `src/backend/app/presentation/debts.py` | 25-93 | Faltan pagos, saldo pendiente e historial |
-| Dashboard agregado | PARTIAL | Endpoint agregado con cinco metricas | `src/backend/app/presentation/dashboard.py` | 15-30 | No incluye pendientes, proximas obligaciones ni estadisticas |
-| Presupuestos | PARTIAL | Calcula gasto y porcentaje | `src/backend/app/application/planning.py` | 19-59 | No hay CRUD completo ni alertas 50/80/100 deduplicadas |
-| Metas | PARTIAL | Contribucion puede descontar cuenta y actualizar meta | `src/backend/app/application/planning.py` | 62-134 | Idempotencia y rollback real no demostrados |
-| Notificaciones | PARTIAL | Listar, leer y algunos eventos automaticos | `src/backend/app/application/planning.py` | 136-170 | Riesgo de duplicados al consultar presupuesto |
-| Categorias | PARTIAL | Crear/listar por propietario | `src/backend/app/presentation/planning.py` | 174-198 | Faltan sistema, unicidad y lifecycle completo |
-| Recurrencias | PARTIAL | Plantillas persistidas, ownership corregido | `src/backend/app/application/recurring.py` | 1-80 | No hay scheduler, ejecucion ni idempotencia de ejecucion |
-| Error frontend `[object Object]` | PASS | Normalizador trata arrays/objects y mantiene mensaje legible | `src/frontend/src/services/api.ts` | 131-164 | Test frontend pasa |
-| Validacion registro frontend | PARTIAL | Minimo 12 y confirmacion visual | `src/frontend/src/app/App.tsx` | 130-177 | No compara igualdad de password antes de enviar |
-| API client | PARTIAL | Cliente centralizado con Bearer y queries | `src/frontend/src/services/api.ts` | 120-190 | Mantiene casts `as T` y no cubre todas las mutaciones |
-| TypeScript estricto | PASS | `strict`, noUnused y compilacion | `src/frontend/tsconfig.json` | 2-29 | Typecheck/build pasan |
-| Tests unitarios | PARTIAL | 14 backend y 2 frontend pasan | `src/backend/tests`, `src/frontend/tests` | - | No sustituyen integracion financiera |
-| Tests PostgreSQL reales | BLOCKED | Fixture y casos existen, pero no se ejecutaron localmente | `src/backend/tests/integration` | - | CI es el entorno previsto |
-| Tests E2E | NOT IMPLEMENTED | No existe flujo E2E completo automatizado | `src/backend/tests/e2e` | - | Falta flujo financiero de extremo a extremo |
-| Coverage | PARTIAL | Umbral 60 y cobertura local 61.55% | `src/backend/pyproject.toml` | 48-54 | SPEC exige 100%; no se debe falsear |
-| CI PostgreSQL | PARTIAL | Servicio, Alembic e integracion declarados | `.github/workflows/ci.yml` | 8-64 | No se ejecutó CI real en este entorno |
-| CI frontend | PASS | npm ci, lint, typecheck, test, build | `.github/workflows/ci.yml` | 68-100 | Parser mantiene warning de version |
-| Migraciones | PARTIAL | Cadena hasta 0010 y fingerprint | `src/backend/alembic/versions` | - | Upgrade offline/imagen validado; downgrade no probado |
-| Constraints DB | PARTIAL | Unique idempotencia y FKs | `src/backend/alembic/versions/0008_add_idempotency_keys.py` | 15-31 | Faltan CHECKs de estados/montos/ownership compuesto |
-| Docker backend | PASS | Build y Alembic configurado al inicio | `docker/backend/Dockerfile` | 1-16 | Build validado; pytest no forma parte del runtime |
-| Docker frontend | PASS | Nginx SPA y proxy API | `docker/frontend/nginx.conf` | 1-20 | Build y SPA validado |
-| Clean Architecture | PARTIAL | Capas y repositorios presentes | `src/backend/app` | - | Routers siguen componiendo infraestructura; UoW existe pero no es frontera de use case |
-| Documentacion | PARTIAL | PHASE4_STATUS y audit previos existen | `docs/PHASE4_STATUS.md` | 1-60 | SPEC/ARCHITECTURE/SECURITY no están sincronizados plenamente |
-| ADRs | PARTIAL | ADR-001 a ADR-003 | `docs/decisions` | - | Faltan ADR de UoW, idempotencia, concurrencia, sesiones, CSRF y préstamos |
+| Requisito                        | Estado          | Evidencia                                                                            | Archivo                                                      |            Linea | Test                                                                                   |
+| -------------------------------- | --------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------ | ---------------: | -------------------------------------------------------------------------------------- |
+| Unit of Work                     | PARTIAL         | UoW existe y `get_db` lo usa                                                         | `src/backend/app/infrastructure/database.py`                 |            22-25 | Unit tests pasan; falta prueba de fallo HTTP multi-entidad                             |
+| Rollback financiero real         | BLOCKED         | Context manager hace rollback, pero no hay evidencia PostgreSQL financiera ejecutada | `src/backend/app/infrastructure/unit_of_work.py`             |             7-16 | Integracion bloqueada                                                                  |
+| Idempotency key persistente      | PARTIAL         | Tabla, unique y fingerprint SHA-256                                                  | `src/backend/app/infrastructure/models/idempotency.py`       |             8-24 | Tests unitarios; falta doble request PostgreSQL ejecutado                              |
+| Idempotencia atomica             | PARTIAL         | `pg_advisory_xact_lock` y `ON CONFLICT DO NOTHING`                                   | `src/backend/app/infrastructure/repositories/idempotency.py` |            12-54 | No demostrada bajo concurrencia real                                                   |
+| Payload fingerprint              | PARTIAL         | Fingerprint canonico de payload                                                      | `src/backend/app/presentation/idempotency.py`                |             1-10 | No hay prueba completa para todas las operaciones                                      |
+| Misma key + payload distinto     | PASS            | Routers comparan fingerprint y devuelven 409                                         | `src/backend/app/presentation/transactions.py`               |            31-38 | `test_http_postgres.py`, preparado; ejecucion PostgreSQL bloqueada                     |
+| Concurrencia de gastos           | PARTIAL         | `UPDATE ... current_balance + delta >= 0`                                            | `src/backend/app/infrastructure/repositories/accounts.py`    |            45-66 | No existe PASS: prueba PostgreSQL bloqueada                                            |
+| Concurrencia de transferencias   | BLOCKED         | No hay prueba real ejecutada                                                         | `src/backend/app/application/transactions.py`                |            45-62 | Falta prueba concurrente                                                               |
+| No saldo negativo                | PARTIAL         | Condicion SQL evita update invalido                                                  | `src/backend/app/infrastructure/repositories/accounts.py`    |            53-64 | Unit tests; falta PostgreSQL concurrencia                                              |
+| Registro/login                   | PARTIAL         | Argon2, JWT, schemas y persistencia                                                  | `src/backend/app/presentation/auth.py`                       |            40-90 | Tests unitarios; HTTP DB bloqueado                                                     |
+| Refresh token                    | PARTIAL         | Cookie HttpOnly, hash, expiracion y rotacion                                         | `src/backend/app/presentation/auth.py`                       |           92-126 | Test HTTP preparado; PostgreSQL bloqueado                                              |
+| Refresh reuse detection          | PARTIAL         | Token rotado queda revocado                                                          | `src/backend/app/infrastructure/repositories/tokens.py`      |            25-58 | Test preparado; no ejecutado con DB real                                               |
+| Logout server-side               | PARTIAL         | Revoca refresh y elimina cookie                                                      | `src/backend/app/presentation/auth.py`                       |          128-140 | Falta test HTTP real ejecutado                                                         |
+| CSRF refresh                     | PARTIAL         | Valida Origin/Referer contra CORS                                                    | `src/backend/app/presentation/auth.py`                       |            22-32 | `test_phase46_security.py` cubre función; falta test de endpoint/DB                    |
+| Secretos produccion              | PASS            | Produccion rechaza secreto corto/conocido                                            | `src/backend/app/core/config.py`                             |            20-31 | `test_phase46_security.py`                                                             |
+| Secretos Compose                 | PARTIAL         | Compose exige variables, pero CI usa credenciales de servicio en YAML                | `compose.yml`                                                |             5-14 | Config valido; requiere política de secretos CI                                        |
+| Ownership recurrencias           | PARTIAL         | Valida cuenta propia y activa                                                        | `src/backend/app/application/recurring.py`                   |            27-42 | Unit test; falta ownership HTTP PostgreSQL ejecutado                                   |
+| Ownership cuentas                | PARTIAL         | Repositorio filtra owner                                                             | `src/backend/app/infrastructure/repositories/accounts.py`    |            32-43 | Falta prueba HTTP ejecutada                                                            |
+| Ownership transacciones          | PARTIAL         | Cuenta origen se obtiene con owner autenticado                                       | `src/backend/app/application/transactions.py`                |            37-45 | Falta prueba HTTP ejecutada                                                            |
+| Ownership deudas/cuotas          | PARTIAL         | Debt se consulta por owner antes de cuotas                                           | `src/backend/app/presentation/debts.py`                      |            54-93 | Falta modificar/pagar y prueba HTTP                                                    |
+| Aceptacion de prestamo           | PARTIAL         | Exige cuentas y actualiza ambos saldos/ledger                                        | `src/backend/app/application/loans.py`                       |           91-175 | Falta PostgreSQL rollback/consistencia ejecutado                                       |
+| Devolucion parcial               | PARTIAL         | Mueve fondos y crea ledger                                                           | `src/backend/app/application/loans.py`                       |          189-258 | Estado parcial explicito y prueba real faltan                                          |
+| Devolucion completa              | PARTIAL         | Marca SETTLED cuando total aceptado iguala monto                                     | `src/backend/app/application/loans.py`                       |          279-292 | Falta prueba completa, saldo y retry                                                   |
+| Ledger préstamo/devolucion       | PARTIAL         | Crea dos transacciones por movimiento                                                | `src/backend/app/application/loans.py`                       | 130-175, 240-278 | No probado con DB real                                                                 |
+| Estados income/expense           | NOT IMPLEMENTED | Solo existe `TransactionType`                                                        | `src/backend/app/domain/transaction.py`                      |             1-21 | No existen estados EXPECTED/RECEIVED/PENDING/PAID                                      |
+| Deudas/cuotas                    | PARTIAL         | Modelos, repositorio y endpoints minimos                                             | `src/backend/app/presentation/debts.py`                      |            25-93 | Faltan pagos, saldo pendiente e historial                                              |
+| Dashboard agregado               | PARTIAL         | Endpoint agregado con cinco metricas                                                 | `src/backend/app/presentation/dashboard.py`                  |            15-30 | No incluye pendientes, proximas obligaciones ni estadisticas                           |
+| Presupuestos                     | PARTIAL         | Calcula gasto y porcentaje                                                           | `src/backend/app/application/planning.py`                    |            19-59 | No hay CRUD completo ni alertas 50/80/100 deduplicadas                                 |
+| Metas                            | PARTIAL         | Contribucion puede descontar cuenta y actualizar meta                                | `src/backend/app/application/planning.py`                    |           62-134 | Idempotencia y rollback real no demostrados                                            |
+| Notificaciones                   | PARTIAL         | Listar, leer y algunos eventos automaticos                                           | `src/backend/app/application/planning.py`                    |          136-170 | Riesgo de duplicados al consultar presupuesto                                          |
+| Categorias                       | PARTIAL         | Crear/listar por propietario                                                         | `src/backend/app/presentation/planning.py`                   |          174-198 | Faltan sistema, unicidad y lifecycle completo                                          |
+| Recurrencias                     | PARTIAL         | Plantillas persistidas, ownership corregido                                          | `src/backend/app/application/recurring.py`                   |             1-80 | No hay scheduler, ejecucion ni idempotencia de ejecucion                               |
+| Error frontend `[object Object]` | PASS            | Normalizador trata arrays/objects y mantiene mensaje legible                         | `src/frontend/src/services/api.ts`                           |          131-164 | Test frontend pasa                                                                     |
+| Validacion registro frontend     | PARTIAL         | Minimo 12 y confirmacion visual                                                      | `src/frontend/src/app/App.tsx`                               |          130-177 | No compara igualdad de password antes de enviar                                        |
+| API client                       | PARTIAL         | Cliente centralizado con Bearer y queries                                            | `src/frontend/src/services/api.ts`                           |          120-190 | Mantiene casts `as T` y no cubre todas las mutaciones                                  |
+| TypeScript estricto              | PASS            | `strict`, noUnused y compilacion                                                     | `src/frontend/tsconfig.json`                                 |             2-29 | Typecheck/build pasan                                                                  |
+| Tests unitarios                  | PARTIAL         | 14 backend y 2 frontend pasan                                                        | `src/backend/tests`, `src/frontend/tests`                    |                - | No sustituyen integracion financiera                                                   |
+| Tests PostgreSQL reales          | BLOCKED         | Fixture y casos existen, pero no se ejecutaron localmente                            | `src/backend/tests/integration`                              |                - | CI es el entorno previsto                                                              |
+| Tests E2E                        | NOT IMPLEMENTED | No existe flujo E2E completo automatizado                                            | `src/backend/tests/e2e`                                      |                - | Falta flujo financiero de extremo a extremo                                            |
+| Coverage                         | PARTIAL         | Umbral 60 y cobertura local 61.55%                                                   | `src/backend/pyproject.toml`                                 |            48-54 | SPEC exige 100%; no se debe falsear                                                    |
+| CI PostgreSQL                    | PARTIAL         | Servicio, Alembic e integracion declarados                                           | `.github/workflows/ci.yml`                                   |             8-64 | No se ejecutó CI real en este entorno                                                  |
+| CI frontend                      | PASS            | npm ci, lint, typecheck, test, build                                                 | `.github/workflows/ci.yml`                                   |           68-100 | Parser mantiene warning de version                                                     |
+| Migraciones                      | PARTIAL         | Cadena hasta 0010 y fingerprint                                                      | `src/backend/alembic/versions`                               |                - | Upgrade offline/imagen validado; downgrade no probado                                  |
+| Constraints DB                   | PARTIAL         | Unique idempotencia y FKs                                                            | `src/backend/alembic/versions/0008_add_idempotency_keys.py`  |            15-31 | Faltan CHECKs de estados/montos/ownership compuesto                                    |
+| Docker backend                   | PASS            | Build y Alembic configurado al inicio                                                | `docker/backend/Dockerfile`                                  |             1-16 | Build validado; pytest no forma parte del runtime                                      |
+| Docker frontend                  | PASS            | Nginx SPA y proxy API                                                                | `docker/frontend/nginx.conf`                                 |             1-20 | Build y SPA validado                                                                   |
+| Clean Architecture               | PARTIAL         | Capas y repositorios presentes                                                       | `src/backend/app`                                            |                - | Routers siguen componiendo infraestructura; UoW existe pero no es frontera de use case |
+| Documentacion                    | PARTIAL         | PHASE4_STATUS y audit previos existen                                                | `docs/PHASE4_STATUS.md`                                      |             1-60 | SPEC/ARCHITECTURE/SECURITY no están sincronizados plenamente                           |
+| ADRs                             | PARTIAL         | ADR-001 a ADR-003                                                                    | `docs/decisions`                                             |                - | Faltan ADR de UoW, idempotencia, concurrencia, sesiones, CSRF y préstamos              |
 
 ## 5. Financial Core
 
@@ -228,25 +228,25 @@ Añadió UoW por request, fingerprint, advisory lock, pruebas de integración pr
 
 ## 17. FASE 5 READY
 
-| Criterio | Estado |
-|---|---|
-| Financial Core seguro | FAIL |
-| Idempotencia atomica demostrada | BLOCKED |
-| Payload fingerprint | PARTIAL |
+| Criterio                              | Estado  |
+| ------------------------------------- | ------- |
+| Financial Core seguro                 | FAIL    |
+| Idempotencia atomica demostrada       | BLOCKED |
+| Payload fingerprint                   | PARTIAL |
 | Duplicate request concurrente probado | BLOCKED |
-| Balance concurrente probado | BLOCKED |
-| Rollback PostgreSQL probado | BLOCKED |
-| Loan acceptance atomic | PARTIAL |
-| Repayment atomic | PARTIAL |
-| Ownership HTTP probado | BLOCKED |
-| Refresh rotation probado | PARTIAL |
-| Refresh reuse rechazado | PARTIAL |
-| Logout probado | PARTIAL |
-| Secret defaults eliminados | PARTIAL |
-| PostgreSQL integration ejecutada | BLOCKED |
-| CI ejecuta integration real | PARTIAL |
-| No critical financial FAIL | FAIL |
-| Audit report Fase 4.6 generado | PASS |
+| Balance concurrente probado           | BLOCKED |
+| Rollback PostgreSQL probado           | BLOCKED |
+| Loan acceptance atomic                | PARTIAL |
+| Repayment atomic                      | PARTIAL |
+| Ownership HTTP probado                | BLOCKED |
+| Refresh rotation probado              | PARTIAL |
+| Refresh reuse rechazado               | PARTIAL |
+| Logout probado                        | PARTIAL |
+| Secret defaults eliminados            | PARTIAL |
+| PostgreSQL integration ejecutada      | BLOCKED |
+| CI ejecuta integration real           | PARTIAL |
+| No critical financial FAIL            | FAIL    |
+| Audit report Fase 4.6 generado        | PASS    |
 
 ## Decisión
 
@@ -268,10 +268,10 @@ verificado es:
 - Frontend lint/typecheck/tests/build: PASS, 2 tests.
 - Docker Compose config y build: PASS.
 - Las migraciones hasta `0010` se inspeccionaron y la cadena es coherente en
-	fuentes actuales.
+  fuentes actuales.
 - PostgreSQL financiero real, concurrencia y rollback: BLOCKED en Windows; el
-	test de host falla con `asyncpg ConnectionDoesNotExistError` y la imagen de
-	runtime no incluye pytest para ejecutar la suite dentro del contenedor.
+  test de host falla con `asyncpg ConnectionDoesNotExistError` y la imagen de
+  runtime no incluye pytest para ejecutar la suite dentro del contenedor.
 
 La decisión no cambia: **PHASE 5 NOT READY**. La cobertura y los tests unitarios
 no sustituyen la evidencia PostgreSQL exigida para dinero, idempotencia,
