@@ -39,9 +39,7 @@ async def create_debt(
         item = await CreateDebt(repository(session)).execute(
             CreateDebtCommand(current_user.id, **request.model_dump())
         )
-        await session.commit()
     except ValueError as error:
-        await session.rollback()
         raise HTTPException(status_code=400, detail=str(error)) from error
     return DebtResponse.model_validate(item)
 
@@ -73,9 +71,7 @@ async def create_installment(
         item = await CreateInstallment(repo).execute(
             CreateInstallmentCommand(debt_id, **request.model_dump())
         )
-        await session.commit()
     except ValueError as error:
-        await session.rollback()
         raise HTTPException(status_code=400, detail=str(error)) from error
     return InstallmentResponse.model_validate(item)
 

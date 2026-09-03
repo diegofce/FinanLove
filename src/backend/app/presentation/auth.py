@@ -1,8 +1,9 @@
 from datetime import UTC, datetime, timedelta
 from typing import Annotated
+from urllib.parse import urlparse
 
 import jwt
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Response, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -27,6 +28,15 @@ from app.presentation.schemas import (
 router = APIRouter(prefix="/auth", tags=["authentication"])
 
 
+def _validate_csrf_origin(origin: str | None, referer: str | None) -> None:
+    source = origin or referer
+    if source is None:
+        raise HTTPException(status_code=403, detail="CSRF validation failed")
+    value = source if origin else f"{urlparse(source).scheme}://{urlparse(source).netloc}"
+    if value not in settings.CORS_ORIGINS:
+        raise HTTPException(status_code=403, detail="CSRF validation failed")
+
+
 def _create_access_token(subject: str) -> str:
     expires_at = datetime.now(UTC) + timedelta(
         minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
@@ -48,9 +58,7 @@ async def register(
     use_case = RegisterUser(SqlAlchemyUserRepository(session))
     try:
         user = await use_case.execute(RegisterUserCommand(**request.model_dump()))
-        await session.commit()
     except (AuthenticationError, IntegrityError) as error:
-        await session.rollback()
         if isinstance(error, AuthenticationError):
             raise HTTPException(status_code=409, detail=str(error)) from error
         raise HTTPException(
@@ -69,9 +77,9 @@ async def login(
     try:
         user = await use_case.execute(request.login, request.password)
     except AuthenticationError as error:
-        raise HTTPException(status_code=401, detail="Invalid credentials") from error
+        raise HTTPException(
+            status_code=401, detail="Invalid credentials") from error
     refresh_token = await RefreshTokenRepository(session).issue(user.id)
-    await session.commit()
     response.set_cookie(
         "refresh_token",
         refresh_token,
@@ -91,19 +99,19 @@ async def refresh(
     response: Response,
     session: Annotated[AsyncSession, Depends(get_db)],
     refresh_token: Annotated[str | None, Cookie()] = None,
+    origin: Annotated[str | None, Header()] = None,
+    referer: Annotated[str | None, Header()] = None,
 ) -> TokenResponse:
+    _validate_csrf_origin(origin, referer)
     if refresh_token is None:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
     rotated = await RefreshTokenRepository(session).rotate(refresh_token)
     if rotated is None:
-        await session.rollback()
         raise HTTPException(status_code=401, detail="Invalid refresh token")
     user_id, replacement = rotated
     user = await SqlAlchemyUserRepository(session).get_by_id(user_id)
     if user is None or not user.is_active:
-        await session.rollback()
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    await session.commit()
     response.set_cookie(
         "refresh_token",
         replacement,
@@ -126,7 +134,6 @@ async def logout(
 ) -> Response:
     if refresh_token is not None:
         await RefreshTokenRepository(session).revoke(refresh_token)
-        await session.commit()
     response.delete_cookie("refresh_token")
     return response
 

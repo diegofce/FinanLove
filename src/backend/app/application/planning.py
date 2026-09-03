@@ -134,13 +134,8 @@ class ContributeGoal:
                     category="Ahorro",
                 )
             )
-        return await self.repository.update(
-            SavingGoal(
-                **{
-                    **goal.__dict__,
-                    "contributed_amount": goal.contributed_amount + command.amount,
-                }
-            )
+        return await self.repository.add_contribution(
+            goal.id, command.owner_id, command.amount
         )
 
 

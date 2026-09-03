@@ -1,6 +1,7 @@
 import uuid
+from decimal import Decimal
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.planning import (
@@ -45,7 +46,8 @@ class SqlAlchemyBudgetRepository:
                     TransactionModel.occurred_at <= model.period_end,
                 )
             )
-            budgets.append(Budget(**{**model.__dict__, "spent_amount": spent or 0}))
+            budgets.append(
+                Budget(**{**model.__dict__, "spent_amount": spent or 0}))
         return budgets
 
 
@@ -86,6 +88,25 @@ class SqlAlchemyGoalRepository:
         await self.session.flush()
         return item
 
+    async def add_contribution(
+        self, goal_id: uuid.UUID, owner_id: uuid.UUID, amount: Decimal
+    ) -> SavingGoal:
+        result = await self.session.execute(
+            update(SavingGoalModel)
+            .where(
+                SavingGoalModel.id == goal_id,
+                SavingGoalModel.owner_id == owner_id,
+            )
+            .values(
+                contributed_amount=SavingGoalModel.contributed_amount + amount
+            )
+            .returning(SavingGoalModel)
+        )
+        model = result.scalar_one_or_none()
+        if model is None:
+            raise ValueError("Goal not found")
+        return SavingGoal(**model.__dict__)
+
 
 class SqlAlchemyNotificationRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -99,7 +120,8 @@ class SqlAlchemyNotificationRepository:
 
     async def list_for_user(self, user_id: uuid.UUID) -> list[Notification]:
         result = await self.session.scalars(
-            select(NotificationModel).where(NotificationModel.user_id == user_id)
+            select(NotificationModel).where(
+                NotificationModel.user_id == user_id)
         )
         return [Notification(**model.__dict__) for model in result.all()]
 

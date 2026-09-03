@@ -3,15 +3,19 @@ services:
     image: postgres:16-alpine
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: finanlove
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:-finanlove}
     ports:
       - "5432:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d finanlove"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-finanlove}",
+        ]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -21,7 +25,10 @@ services:
       context: .
       dockerfile: docker/backend/Dockerfile
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/finanlove
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      APP_ENV: ${APP_ENV:-production}
+      DEBUG: ${DEBUG:-false}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
     ports:
       - "8000:8000"
     depends_on:

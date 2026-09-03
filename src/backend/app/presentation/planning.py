@@ -40,6 +40,7 @@ from app.infrastructure.repositories.planning import (
 )
 from app.infrastructure.repositories.transactions import SqlAlchemyTransactionRepository
 from app.presentation.dependencies import get_current_user
+from app.presentation.idempotency import request_fingerprint
 from app.presentation.schemas import (
     BudgetResponse,
     CategoryResponse,
@@ -69,9 +70,7 @@ async def create_budget(
             CreateBudgetCommand(current_user.id, **request.model_dump())
         )
     except ValueError as error:
-        await session.rollback()
         raise HTTPException(status_code=400, detail=str(error)) from error
-    await session.commit()
     return BudgetResponse.model_validate(item, from_attributes=True)
 
 
@@ -81,7 +80,8 @@ async def list_budgets(
     session: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[BudgetResponse]:
     items = await ListBudgets(
-        SqlAlchemyBudgetRepository(session), SqlAlchemyNotificationRepository(session)
+        SqlAlchemyBudgetRepository(
+            session), SqlAlchemyNotificationRepository(session)
     ).execute(current_user.id)
     return [BudgetResponse.model_validate(item, from_attributes=True) for item in items]
 
@@ -98,7 +98,6 @@ async def create_goal(
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
-    await session.commit()
     return GoalResponse.model_validate(item, from_attributes=True)
 
 
@@ -120,7 +119,15 @@ async def contribute_goal(
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> GoalResponse:
     idempotency = IdempotencyRepository(session)
+    fingerprint = request_fingerprint(request.model_dump(mode="json"))
     if idempotency_key:
+        record = await idempotency.get_record(
+            current_user.id, idempotency_key, "goal_contribution"
+        )
+        if record and record.fingerprint != fingerprint:
+            raise HTTPException(
+                status_code=409, detail="Idempotency key payload conflict"
+            )
         existing_id = await idempotency.get(
             current_user.id, idempotency_key, "goal_contribution"
         )
@@ -145,11 +152,10 @@ async def contribute_goal(
     try:
         if idempotency_key:
             await idempotency.add(
-                current_user.id, idempotency_key, "goal_contribution", item.id
+                current_user.id, idempotency_key, "goal_contribution", item.id,
+                request_fingerprint(request.model_dump(mode="json"))
             )
-        await session.commit()
     except IntegrityError:
-        await session.rollback()
         if idempotency_key:
             existing_id = await idempotency.get(
                 current_user.id, idempotency_key, "goal_contribution"
@@ -194,7 +200,6 @@ async def mark_notification_read(
         ).execute(notification_id, current_user.id)
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error)) from error
-    await session.commit()
     return NotificationResponse.model_validate(item, from_attributes=True)
 
 
@@ -209,7 +214,6 @@ async def create_category(
     item = await CreateCategory(SqlAlchemyCategoryRepository(session)).execute(
         CreateCategoryCommand(current_user.id, request.name)
     )
-    await session.commit()
     return CategoryResponse.model_validate(item, from_attributes=True)
 
 
@@ -241,11 +245,11 @@ async def create_recurring_transaction(
             SqlAlchemyRecurringTransactionRepository(session),
             SqlAlchemyAccountRepository(session),
         ).execute(
-            CreateRecurringTransactionCommand(current_user.id, **request.model_dump())
+            CreateRecurringTransactionCommand(
+                current_user.id, **request.model_dump())
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
-    await session.commit()
     return RecurringTransactionResponse.model_validate(item, from_attributes=True)
 
 

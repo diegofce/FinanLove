@@ -25,6 +25,7 @@ from app.infrastructure.repositories.planning import SqlAlchemyNotificationRepos
 from app.infrastructure.repositories.transactions import SqlAlchemyTransactionRepository
 from app.infrastructure.repositories.users import SqlAlchemyUserRepository
 from app.presentation.dependencies import get_current_user
+from app.presentation.idempotency import request_fingerprint
 from app.presentation.schemas import (
     CreateLoanRequest,
     CreateRepaymentRequest,
@@ -45,7 +46,15 @@ async def request_loan(
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> LoanResponse:
     idempotency = IdempotencyRepository(session)
+    fingerprint = request_fingerprint(request.model_dump(mode="json"))
     if idempotency_key:
+        record = await idempotency.get_record(
+            current_user.id, idempotency_key, "loan_request"
+        )
+        if record and record.fingerprint != fingerprint:
+            raise HTTPException(
+                status_code=409, detail="Idempotency key payload conflict"
+            )
         existing_id = await idempotency.get(
             current_user.id, idempotency_key, "loan_request"
         )
@@ -74,11 +83,10 @@ async def request_loan(
     try:
         if idempotency_key:
             await idempotency.add(
-                current_user.id, idempotency_key, "loan_request", loan.id
+                current_user.id, idempotency_key, "loan_request", loan.id,
+                request_fingerprint(request.model_dump(mode="json"))
             )
-        await session.commit()
     except IntegrityError:
-        await session.rollback()
         if idempotency_key:
             existing_id = await idempotency.get(
                 current_user.id, idempotency_key, "loan_request"
@@ -115,7 +123,15 @@ async def change_loan_status(
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> LoanResponse:
     idempotency = IdempotencyRepository(session)
+    fingerprint = request_fingerprint(request.model_dump(mode="json"))
     if idempotency_key:
+        record = await idempotency.get_record(
+            current_user.id, idempotency_key, "loan_acceptance"
+        )
+        if record and record.fingerprint != fingerprint:
+            raise HTTPException(
+                status_code=409, detail="Idempotency key payload conflict"
+            )
         existing_id = await idempotency.get(
             current_user.id, idempotency_key, "loan_acceptance"
         )
@@ -145,11 +161,10 @@ async def change_loan_status(
     try:
         if idempotency_key:
             await idempotency.add(
-                current_user.id, idempotency_key, "loan_acceptance", loan.id
+                current_user.id, idempotency_key, "loan_acceptance", loan.id,
+                request_fingerprint(request.model_dump(mode="json"))
             )
-        await session.commit()
     except IntegrityError:
-        await session.rollback()
         if idempotency_key:
             existing_id = await idempotency.get(
                 current_user.id, idempotency_key, "loan_acceptance"
@@ -175,7 +190,15 @@ async def request_repayment(
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> RepaymentResponse:
     idempotency = IdempotencyRepository(session)
+    fingerprint = request_fingerprint(request.model_dump(mode="json"))
     if idempotency_key:
+        record = await idempotency.get_record(
+            current_user.id, idempotency_key, "repayment_request"
+        )
+        if record and record.fingerprint != fingerprint:
+            raise HTTPException(
+                status_code=409, detail="Idempotency key payload conflict"
+            )
         existing_id = await idempotency.get(
             current_user.id, idempotency_key, "repayment_request"
         )
@@ -200,11 +223,10 @@ async def request_repayment(
     try:
         if idempotency_key:
             await idempotency.add(
-                current_user.id, idempotency_key, "repayment_request", repayment.id
+                current_user.id, idempotency_key, "repayment_request", repayment.id,
+                request_fingerprint(request.model_dump(mode="json"))
             )
-        await session.commit()
     except IntegrityError:
-        await session.rollback()
         if idempotency_key:
             existing_id = await idempotency.get(
                 current_user.id, idempotency_key, "repayment_request"
@@ -234,7 +256,15 @@ async def change_repayment_status(
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> RepaymentResponse:
     idempotency = IdempotencyRepository(session)
+    fingerprint = request_fingerprint(request.model_dump(mode="json"))
     if idempotency_key:
+        record = await idempotency.get_record(
+            current_user.id, idempotency_key, "repayment_acceptance"
+        )
+        if record and record.fingerprint != fingerprint:
+            raise HTTPException(
+                status_code=409, detail="Idempotency key payload conflict"
+            )
         existing_id = await idempotency.get(
             current_user.id, idempotency_key, "repayment_acceptance"
         )
@@ -255,16 +285,14 @@ async def change_repayment_status(
             )
         )
     except ValueError as error:
-        await session.rollback()
         raise HTTPException(status_code=400, detail=str(error)) from error
     try:
         if idempotency_key:
             await idempotency.add(
-                current_user.id, idempotency_key, "repayment_acceptance", repayment.id
+                current_user.id, idempotency_key, "repayment_acceptance", repayment.id,
+                request_fingerprint(request.model_dump(mode="json"))
             )
-        await session.commit()
     except IntegrityError:
-        await session.rollback()
         if idempotency_key:
             existing_id = await idempotency.get(
                 current_user.id, idempotency_key, "repayment_acceptance"

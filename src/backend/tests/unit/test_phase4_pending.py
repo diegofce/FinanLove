@@ -36,6 +36,15 @@ class Goals:
         self.goal = goal
         return goal
 
+    async def add_contribution(
+        self, goal_id: uuid.UUID, owner_id: uuid.UUID, amount: Decimal
+    ) -> SavingGoal:
+        self.goal = replace(
+            self.goal,
+            contributed_amount=self.goal.contributed_amount + amount,
+        )
+        return self.goal
+
 
 class Accounts:
     def __init__(self, account: Account) -> None:
@@ -115,7 +124,8 @@ async def test_expense_to_zero_emits_low_balance_notification() -> None:
 
     await CreateTransaction(Accounts(source), Transactions(), notifications).execute(
         CreateTransactionCommand(
-            owner_id, source.id, TransactionType.EXPENSE, Decimal("10.00"), "Comida"
+            owner_id, source.id, TransactionType.EXPENSE, Decimal(
+                "10.00"), "Comida"
         )
     )
 

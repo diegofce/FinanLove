@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import (
 
 from app.core.config import settings
 from app.infrastructure.models.base import Base
+from app.infrastructure.unit_of_work import SqlAlchemyUnitOfWork
 
 __all__ = ["Base", "engine", "SessionLocal", "get_db"]
 
@@ -22,4 +23,5 @@ SessionLocal = async_sessionmaker(
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with SessionLocal() as session:
-        yield session
+        async with SqlAlchemyUnitOfWork(session):
+            yield session

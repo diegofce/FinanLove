@@ -33,7 +33,6 @@ async def create_account(
             current_balance=request.current_balance,
         )
     )
-    await session.commit()
     return AccountResponse.model_validate(account)
 
 

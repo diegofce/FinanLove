@@ -1,7 +1,6 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, HTTPException, status
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.application.transactions import (
@@ -16,6 +15,7 @@ from app.infrastructure.repositories.idempotency import IdempotencyRepository
 from app.infrastructure.repositories.planning import SqlAlchemyNotificationRepository
 from app.infrastructure.repositories.transactions import SqlAlchemyTransactionRepository
 from app.presentation.dependencies import get_current_user
+from app.presentation.idempotency import request_fingerprint
 from app.presentation.schemas import CreateTransactionRequest, TransactionResponse
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -31,13 +31,18 @@ async def create_transaction(
     idempotency_key: Annotated[str | None, Header()] = None,
 ) -> TransactionResponse:
     idempotency = IdempotencyRepository(session)
+    fingerprint = request_fingerprint(request.model_dump(mode="json"))
     if idempotency_key:
-        existing_id = await idempotency.get(
+        existing_record = await idempotency.get_record(
             current_user.id, idempotency_key, "transaction"
         )
-        if existing_id:
+        if existing_record and existing_record.fingerprint != fingerprint:
+            raise HTTPException(
+                status_code=409, detail="Idempotency key payload conflict"
+            )
+        if existing_record:
             existing = await SqlAlchemyTransactionRepository(session).get_owned(
-                existing_id, current_user.id
+                existing_record.response_id, current_user.id
             )
             if existing is not None:
                 return TransactionResponse.model_validate(existing)
@@ -57,30 +62,20 @@ async def create_transaction(
                 destination_account_id=request.destination_account_id,
             )
         )
-    except ValueError as error:
-        await session.rollback()
-        raise HTTPException(status_code=400, detail=str(error)) from error
-    try:
         if idempotency_key:
-            await idempotency.add(
-                current_user.id, idempotency_key, "transaction", transaction.id
+            inserted = await idempotency.add(
+                current_user.id,
+                idempotency_key,
+                "transaction",
+                transaction.id,
+                fingerprint,
             )
-        await session.commit()
-    except IntegrityError:
-        await session.rollback()
-        if idempotency_key:
-            existing_id = await idempotency.get(
-                current_user.id, idempotency_key, "transaction"
-            )
-            if existing_id:
-                existing = await SqlAlchemyTransactionRepository(session).get_owned(
-                    existing_id, current_user.id
+            if not inserted:
+                raise HTTPException(
+                    status_code=409, detail="Idempotency key already used"
                 )
-                if existing is not None:
-                    return TransactionResponse.model_validate(existing)
-        raise HTTPException(
-            status_code=409, detail="Idempotency key already used"
-        ) from None
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
     return TransactionResponse.model_validate(transaction)
 
 

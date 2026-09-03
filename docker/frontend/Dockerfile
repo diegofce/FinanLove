@@ -3,7 +3,7 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 COPY src/frontend/package*.json ./
-RUN npm install
+RUN npm ci
 
 COPY src/frontend .
 RUN npm run build

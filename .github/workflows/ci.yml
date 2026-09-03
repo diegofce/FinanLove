@@ -45,12 +45,19 @@ jobs:
         run: |
           cd src/backend
           mypy .
-      - name: Run Tests
+      - name: Run PostgreSQL integration tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://finanlove:finanlove@localhost:5432/finanlove_test
+          TEST_DATABASE_URL: postgresql+asyncpg://finanlove:finanlove@localhost:5432/finanlove_test
+        run: |
+          cd src/backend
+          pytest tests/integration -q
+      - name: Run unit and HTTP tests with coverage
         env:
           DATABASE_URL: postgresql+asyncpg://finanlove:finanlove@localhost:5432/finanlove_test
         run: |
           cd src/backend
-          pytest --cov=app --cov-report=term-missing --cov-fail-under=60
+          pytest tests/unit tests/e2e --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=60
 
   frontend:
     runs-on: ubuntu-latest
