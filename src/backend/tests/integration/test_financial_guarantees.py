@@ -24,7 +24,7 @@ async def create_user_and_account(
     user = await RegisterUser(SqlAlchemyUserRepository(session)).execute(
         RegisterUserCommand(
             username=f"integration_{uuid.uuid4().hex[:12]}",
-            email=f"{uuid.uuid4().hex}@example.test",
+            email=f"{uuid.uuid4().hex}@example.com",
             first_name="Integration",
             last_name="Tester",
             password="A-very-secure-password-123",

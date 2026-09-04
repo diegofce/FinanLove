@@ -10,7 +10,7 @@ async def register_and_login(client: AsyncClient) -> str:
     suffix = uuid4().hex[:12]
     payload = {
         "username": f"http_{suffix}",
-        "email": f"{suffix}@example.test",
+        "email": f"{suffix}@example.com",
         "first_name": "HTTP",
         "last_name": "Tester",
         "password": "A-very-secure-password-123",
@@ -45,14 +45,15 @@ async def test_auth_http_flow_rotation_reuse_logout_and_me(
     replacement = http_client.cookies.get("refresh_token")
     assert replacement is not None and replacement != first_refresh
 
-    http_client.cookies.set("refresh_token", first_refresh)
     reused = await http_client.post(
         "/api/v1/auth/refresh",
-        headers={"Origin": "http://localhost:5173"},
+        headers={
+            "Origin": "http://localhost:5173",
+            "Cookie": f"refresh_token={first_refresh}",
+        },
     )
     assert reused.status_code == 401
 
-    http_client.cookies.set("refresh_token", replacement)
     logged_out = await http_client.post("/api/v1/auth/logout")
     assert logged_out.status_code == 204
     assert http_client.cookies.get("refresh_token") is None
