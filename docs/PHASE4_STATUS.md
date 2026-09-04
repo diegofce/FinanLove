@@ -33,6 +33,12 @@
   participante y actualizan los saldos usando la misma sesión transaccional.
 - `GET /api/v1/auth/me` expone el rol mínimo (`USER` por defecto); `POST
 /api/v1/auth/refresh` y `POST /api/v1/auth/logout` gestionan la sesión refresh.
+- Fase 4.6: Unit of Work por request, fingerprint de idempotencia, lock
+  advisory PostgreSQL, protección CSRF del refresh y validación de secreto de
+  producción.
+- Fase 4.6: suite de integración PostgreSQL preparada para rollback,
+  concurrencia, idempotencia y ownership; requiere ejecutarse en CI o dentro
+  de una red Docker con PostgreSQL accesible.
 
 ## Pendiente
 
@@ -60,3 +66,6 @@
   reintentos e idempotencia de ejecución definidos por producto.
 - La semántica de deuda (liquidación, pagos y relación con préstamos) no se inventa;
   esta fase sólo persiste deudas y cuotas abiertas.
+- La verificación local Windows no puede ejecutar la suite PostgreSQL porque
+  `asyncpg` no resuelve el hostname Docker `db` desde el host y el puente
+  publicado puede cerrar la conexión. Esto queda como BLOCKED, no como PASS.

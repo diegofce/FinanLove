@@ -26,21 +26,21 @@ No se borraron migraciones, no se creo `.env`, no se crearon cuentas ni se usaro
 
 ## 3. Tests ejecutados
 
-| Comando                                          | Resultado | Evidencia                                                                                     |
-| ------------------------------------------------ | --------- | --------------------------------------------------------------------------------------------- |
-| `python -m ruff check .`                         | PASS      | Sin errores en 80 archivos backend.                                                           |
-| `python -m mypy .`                               | PASS      | Sin errores en 80 archivos backend.                                                           |
-| `python -m pytest`                               | PASS      | 14 passed, 1 skipped en la ultima ejecucion local.                                            |
-| `python -m pytest --cov=app --cov-fail-under=60` | PASS      | 61.10%/61.55% segun ejecucion; supera umbral 60%.                                             |
-| `npm run lint`                                   | PASS      | Warning no bloqueante por TypeScript fuera del rango soportado por parser.                    |
-| `npm run typecheck`                              | PASS      | TypeScript estricto compila.                                                                  |
-| `npm test`                                       | PASS      | 2 tests frontend.                                                                             |
-| `npm run build`                                  | PASS      | Vite genera bundle.                                                                           |
-| `docker compose config --quiet`                  | PASS      | Compose valido con variables efimeras.                                                        |
-| `docker compose build`                           | PASS      | Imagenes backend/frontend construidas.                                                        |
-| `alembic upgrade head` en contenedor             | PASS      | Migraciones aplicadas en ejecucion controlada previa.                                         |
-| PostgreSQL integration desde Windows             | BLOCKED   | `asyncpg` pierde conexion con el puerto publicado; no se confirma comportamiento financiero.  |
-| PostgreSQL integration dentro de imagen runtime  | BLOCKED   | La imagen de produccion no incluye pytest y la ejecucion de test no pudo demostrar los casos. |
+| Comando                                          | Resultado | Evidencia                                                                                       |
+| ------------------------------------------------ | --------- | ----------------------------------------------------------------------------------------------- |
+| `python -m ruff check .`                         | PASS      | Sin errores en 80 archivos backend.                                                             |
+| `python -m mypy .`                               | PASS      | Sin errores en 80 archivos backend.                                                             |
+| `python -m pytest`                               | PASS      | 20 passed, 8 skipped en la ultima ejecucion local.                                              |
+| `python -m pytest --cov=app --cov-fail-under=60` | PASS      | 62.10%; supera umbral 60%.                                                                      |
+| `npm run lint`                                   | PASS      | Warning no bloqueante por TypeScript fuera del rango soportado por parser.                      |
+| `npm run typecheck`                              | PASS      | TypeScript estricto compila.                                                                    |
+| `npm test`                                       | PASS      | 2 tests frontend.                                                                               |
+| `npm run build`                                  | PASS      | Vite genera bundle.                                                                             |
+| `docker compose config --quiet`                  | PASS      | Compose valido con variables efimeras.                                                          |
+| `docker compose build`                           | PASS      | Imagenes backend/frontend construidas.                                                          |
+| `alembic upgrade head` en contenedor             | PASS      | Migraciones aplicadas en ejecucion controlada previa.                                           |
+| PostgreSQL integration desde Windows             | BLOCKED   | El hostname Compose `db` no resuelve desde host y el puente publicado puede cerrar la conexión. |
+| PostgreSQL integration dentro de imagen runtime  | BLOCKED   | La imagen de producción no incluye pytest; CI instala el extra dev, pero no se ejecutó aquí.    |
 
 ## 4. Matriz
 

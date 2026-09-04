@@ -35,6 +35,6 @@ TEST_DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/finanlove_te
 The shared fixture runs `alembic upgrade head` against that controlled database.
 It does not drop or truncate tables and skips database-backed tests explicitly
 when `TEST_DATABASE_URL` is absent. Tests create uniquely named records, so CI
-should provide a disposable test database or an isolated database/schema. The
-local verification on Windows was limited to the explicit skip path because no
-PostgreSQL service was available at the configured host.
+should provide a disposable test database or an isolated database/schema. On
+Windows, run the suite from CI or from a container on the same Docker network;
+the host Python process cannot resolve the Compose hostname `db` reliably.

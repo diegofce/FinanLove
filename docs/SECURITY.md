@@ -15,6 +15,20 @@ FinanLove handles sensitive financial data. Security is not an afterthought.
 7. **CORS:** Explicitly whitelist allowed origins.
 8. **CSRF on refresh:** `POST /api/v1/auth/refresh` requires an `Origin` header in `CORS_ORIGINS`, or a `Referer` whose origin is in that allowlist. Requests without either header or from another origin return `403`. This protects the HttpOnly refresh-token cookie while retaining browser-based refresh.
 
+9. **Financial idempotency:** Financial requests should send an
+   `Idempotency-Key`. The server scopes the key to the authenticated user and
+   operation, stores a SHA-256 payload fingerprint, and rejects a reused key
+   with a different payload.
+
+10. **Financial concurrency:** Account balance changes use a PostgreSQL
+    conditional update that requires the resulting balance to remain
+    non-negative. PostgreSQL integration tests are required before claiming
+    concurrency behavior is verified.
+
+11. **Access-token lifetime:** Logout revokes the server-side refresh session.
+    An already-issued access JWT may remain valid until its short expiration
+    because immediate access-token revocation is not implemented.
+
 ### Local Compose configuration
 
 Copy `.env.example` to a local environment file and replace all placeholder values. Compose requires `POSTGRES_PASSWORD`, `DATABASE_URL`, and `JWT_SECRET`; it does not embed credentials in the service definition.
