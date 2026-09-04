@@ -26,6 +26,8 @@ BACKEND_ROOT = Path(__file__).parents[2]
 def test_database_url() -> str:
     database_url = os.getenv("TEST_DATABASE_URL")
     if not database_url or not database_url.startswith("postgresql"):
+        if os.getenv("CI") == "true":
+            pytest.fail("CI requires TEST_DATABASE_URL PostgreSQL")
         pytest.skip("TEST_DATABASE_URL PostgreSQL is not configured")
     return database_url
 
