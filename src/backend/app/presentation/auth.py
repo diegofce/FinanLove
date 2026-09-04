@@ -128,12 +128,12 @@ async def refresh(
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
 async def logout(
-    response: Response,
     session: Annotated[AsyncSession, Depends(get_db)],
     refresh_token: Annotated[str | None, Cookie()] = None,
 ) -> Response:
     if refresh_token is not None:
         await RefreshTokenRepository(session).revoke(refresh_token)
+    response = Response(status_code=status.HTTP_204_NO_CONTENT)
     response.delete_cookie("refresh_token")
     return response
 

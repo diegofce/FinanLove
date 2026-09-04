@@ -32,7 +32,7 @@ def test_database_url() -> str:
     return database_url
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def postgres_engine(test_database_url: str) -> AsyncIterator[AsyncEngine]:
     environment = os.environ.copy()
     environment["DATABASE_URL"] = test_database_url
