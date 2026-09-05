@@ -198,9 +198,11 @@ class RequestRepayment:
         )
         if loan is None or loan.borrower_id != command.user_id:
             raise ValueError("Only the borrower can request a repayment")
+        accepted = await self.loans.accepted_repayment_total(loan.id)
+        if loan.status is LoanStatus.SETTLED and accepted >= loan.amount:
+            raise ValueError("Repayment exceeds outstanding loan amount")
         if loan.status is not LoanStatus.ACCEPTED:
             raise ValueError("Loan is not active")
-        accepted = await self.loans.accepted_repayment_total(loan.id)
         if accepted + command.amount > loan.amount:
             raise ValueError("Repayment exceeds outstanding loan amount")
         return await self.loans.add_repayment(

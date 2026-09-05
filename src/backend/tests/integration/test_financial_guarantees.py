@@ -23,6 +23,7 @@ from app.domain.loan import LoanStatus, RepaymentStatus
 from app.domain.transaction import TransactionType
 from app.infrastructure.models.account import AccountModel
 from app.infrastructure.models.loan import LoanModel
+from app.infrastructure.models.transaction import TransactionModel
 from app.infrastructure.repositories.accounts import SqlAlchemyAccountRepository
 from app.infrastructure.repositories.loans import SqlAlchemyLoanRepository
 from app.infrastructure.repositories.planning import SqlAlchemyNotificationRepository
@@ -292,7 +293,18 @@ async def test_loan_repayments_track_partial_full_excess_and_rollback(
         loan_status = await verification_session.scalar(
             select(LoanModel.status).where(LoanModel.id == loan.id)
         )
+        null_occurred_at = await verification_session.scalar(
+            select(func.count())
+            .select_from(TransactionModel)
+            .where(
+                TransactionModel.account_id.in_(
+                    [borrower_account_id, lender_account_id]
+                ),
+                TransactionModel.occurred_at.is_(None),
+            )
+        )
         assert loan_status == LoanStatus.SETTLED.value
+        assert null_occurred_at == 0
 
 
 @pytest.mark.asyncio

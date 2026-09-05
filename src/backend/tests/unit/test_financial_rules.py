@@ -1,5 +1,6 @@
 import uuid
 from dataclasses import replace
+from datetime import UTC
 from decimal import Decimal
 
 import pytest
@@ -175,3 +176,16 @@ async def test_loan_requires_active_different_lender() -> None:
         await RequestLoan(InMemoryUsers({borrower_id}), loans).execute(
             RequestLoanCommand(borrower_id, borrower_id, Decimal("50.00"), "Préstamo")
         )
+
+
+def test_transaction_defaults_occurred_at_with_timezone() -> None:
+    transaction = Transaction(
+        id=uuid.uuid4(),
+        owner_id=uuid.uuid4(),
+        account_id=uuid.uuid4(),
+        transaction_type=TransactionType.INCOME,
+        amount=Decimal("10.00"),
+        description="Ingreso",
+    )
+
+    assert transaction.occurred_at.tzinfo == UTC
