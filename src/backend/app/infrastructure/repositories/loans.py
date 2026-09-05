@@ -71,6 +71,8 @@ class SqlAlchemyLoanRepository:
         if model is None:
             raise ValueError("Loan not found")
         model.status = loan.status.value
+        model.lender_account_id = loan.lender_account_id
+        model.borrower_account_id = loan.borrower_account_id
         await self.session.flush()
         await self.session.refresh(model)
         return self._to_domain(model)

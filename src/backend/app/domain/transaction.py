@@ -1,6 +1,6 @@
 import uuid
-from dataclasses import dataclass
-from datetime import datetime
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
 
@@ -20,6 +20,6 @@ class Transaction:
     amount: Decimal
     description: str
     destination_account_id: uuid.UUID | None = None
-    occurred_at: datetime | None = None
+    occurred_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     created_at: datetime | None = None
     category: str | None = None
