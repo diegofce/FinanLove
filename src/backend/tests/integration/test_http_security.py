@@ -18,9 +18,8 @@ async def test_refresh_rejects_missing_csrf_origin_over_http() -> None:
         async with AsyncClient(
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
-            response = await client.post(
-                "/api/v1/auth/refresh", cookies={"refresh_token": "opaque"}
-            )
+            client.cookies.set("refresh_token", "opaque")
+            response = await client.post("/api/v1/auth/refresh")
         assert response.status_code == 403
         assert response.json()["detail"] == "CSRF validation failed"
     finally:

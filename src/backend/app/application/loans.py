@@ -98,7 +98,9 @@ class ChangeLoanStatus:
         self.transactions = transactions
 
     async def execute(self, command: ChangeLoanStatusCommand) -> Loan:
-        loan = await self.loans.get_for_user(command.loan_id, command.user_id)
+        loan = await self.loans.get_for_user_for_update(
+            command.loan_id, command.user_id
+        )
         if loan is None:
             raise ValueError("Loan not found")
         if command.user_id != loan.lender_id or loan.status is not LoanStatus.REQUESTED:
@@ -191,7 +193,9 @@ class RequestRepayment:
     async def execute(self, command: RequestRepaymentCommand) -> LoanRepayment:
         if command.amount <= 0:
             raise ValueError("Repayment amount must be positive")
-        loan = await self.loans.get_for_user(command.loan_id, command.user_id)
+        loan = await self.loans.get_for_user_for_update(
+            command.loan_id, command.user_id
+        )
         if loan is None or loan.borrower_id != command.user_id:
             raise ValueError("Only the borrower can request a repayment")
         if loan.status is not LoanStatus.ACCEPTED:
@@ -225,7 +229,7 @@ class ChangeRepaymentStatus:
 
     async def execute(self, command: ChangeRepaymentStatusCommand) -> LoanRepayment:
         loan = await self.loans.get_for_user(command.loan_id, command.user_id)
-        repayment = await self.loans.get_repayment_for_loan(
+        repayment = await self.loans.get_repayment_for_loan_for_update(
             command.repayment_id, command.loan_id
         )
         if loan is None or repayment is None:

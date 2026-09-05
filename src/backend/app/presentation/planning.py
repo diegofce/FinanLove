@@ -153,7 +153,7 @@ async def contribute_goal(
         if idempotency_key:
             await idempotency.add(
                 current_user.id, idempotency_key, "goal_contribution", item.id,
-                request_fingerprint(request.model_dump(mode="json"))
+                fingerprint
             )
     except IntegrityError:
         if idempotency_key:

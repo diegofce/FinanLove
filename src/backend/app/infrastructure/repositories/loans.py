@@ -46,8 +46,23 @@ class SqlAlchemyLoanRepository:
         model = await self.session.scalar(
             select(LoanModel).where(
                 LoanModel.id == loan_id,
-                or_(LoanModel.borrower_id == user_id, LoanModel.lender_id == user_id),
+                or_(LoanModel.borrower_id == user_id,
+                    LoanModel.lender_id == user_id),
             )
+        )
+        return self._to_domain(model) if model else None
+
+    async def get_for_user_for_update(
+        self, loan_id: uuid.UUID, user_id: uuid.UUID
+    ) -> Loan | None:
+        model = await self.session.scalar(
+            select(LoanModel)
+            .where(
+                LoanModel.id == loan_id,
+                or_(LoanModel.borrower_id == user_id,
+                    LoanModel.lender_id == user_id),
+            )
+            .with_for_update()
         )
         return self._to_domain(model) if model else None
 
@@ -89,6 +104,19 @@ class SqlAlchemyLoanRepository:
                 LoanRepaymentModel.id == repayment_id,
                 LoanRepaymentModel.loan_id == loan_id,
             )
+        )
+        return self._to_repayment_domain(model) if model else None
+
+    async def get_repayment_for_loan_for_update(
+        self, repayment_id: uuid.UUID, loan_id: uuid.UUID
+    ) -> LoanRepayment | None:
+        model = await self.session.scalar(
+            select(LoanRepaymentModel)
+            .where(
+                LoanRepaymentModel.id == repayment_id,
+                LoanRepaymentModel.loan_id == loan_id,
+            )
+            .with_for_update()
         )
         return self._to_repayment_domain(model) if model else None
 

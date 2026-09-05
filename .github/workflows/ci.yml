@@ -65,9 +65,11 @@ jobs:
       - name: Run unit and HTTP tests with coverage
         env:
           DATABASE_URL: postgresql+asyncpg://finanlove:finanlove@localhost:5432/finanlove_test
+          TEST_DATABASE_URL: postgresql+asyncpg://finanlove:finanlove@localhost:5432/finanlove_test
+          CI: "true"
         run: |
           cd src/backend
-          pytest tests/unit tests/e2e --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=60
+          pytest tests/unit tests/e2e tests/integration --cov=app --cov-report=term-missing --cov-report=xml --cov-fail-under=60
 
   frontend:
     runs-on: ubuntu-latest

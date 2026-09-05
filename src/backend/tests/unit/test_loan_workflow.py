@@ -19,6 +19,11 @@ class LoanRepositoryStub:
             return self.loan
         return None
 
+    async def get_for_user_for_update(
+        self, loan_id: uuid.UUID, user_id: uuid.UUID
+    ) -> Loan | None:
+        return await self.get_for_user(loan_id, user_id)
+
     async def update(self, loan: Loan) -> Loan:
         self.loan = loan
         return loan

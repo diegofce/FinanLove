@@ -84,7 +84,7 @@ async def request_loan(
         if idempotency_key:
             await idempotency.add(
                 current_user.id, idempotency_key, "loan_request", loan.id,
-                request_fingerprint(request.model_dump(mode="json"))
+                fingerprint
             )
     except IntegrityError:
         if idempotency_key:
@@ -162,7 +162,7 @@ async def change_loan_status(
         if idempotency_key:
             await idempotency.add(
                 current_user.id, idempotency_key, "loan_acceptance", loan.id,
-                request_fingerprint(request.model_dump(mode="json"))
+                fingerprint
             )
     except IntegrityError:
         if idempotency_key:
@@ -224,7 +224,7 @@ async def request_repayment(
         if idempotency_key:
             await idempotency.add(
                 current_user.id, idempotency_key, "repayment_request", repayment.id,
-                request_fingerprint(request.model_dump(mode="json"))
+                fingerprint
             )
     except IntegrityError:
         if idempotency_key:
@@ -290,7 +290,7 @@ async def change_repayment_status(
         if idempotency_key:
             await idempotency.add(
                 current_user.id, idempotency_key, "repayment_acceptance", repayment.id,
-                request_fingerprint(request.model_dump(mode="json"))
+                fingerprint
             )
     except IntegrityError:
         if idempotency_key:

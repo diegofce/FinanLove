@@ -29,6 +29,12 @@ FinanLove handles sensitive financial data. Security is not an afterthought.
     An already-issued access JWT may remain valid until its short expiration
     because immediate access-token revocation is not implemented.
 
+12. **Rate limiting decision:** Phase 4.7 does not add an in-process limiter or
+    a new external dependency. Such a limiter would be process-local and would
+    give misleading protection with multiple API workers. Login, registration,
+    and refresh rate limiting remain a Phase 5 security task, to be implemented
+    with a shared store or an edge provider and tested as a deployment concern.
+
 ### Local Compose configuration
 
 Copy `.env.example` to a local environment file and replace all placeholder values. Compose requires `POSTGRES_PASSWORD`, `DATABASE_URL`, and `JWT_SECRET`; it does not embed credentials in the service definition.

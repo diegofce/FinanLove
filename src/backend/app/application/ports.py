@@ -77,6 +77,10 @@ class LoanRepository(Protocol):
         self, loan_id: uuid.UUID, user_id: uuid.UUID
     ) -> Loan | None: ...
 
+    async def get_for_user_for_update(
+        self, loan_id: uuid.UUID, user_id: uuid.UUID
+    ) -> Loan | None: ...
+
     async def update(self, loan: Loan) -> Loan: ...
 
     async def accepted_repayment_total(
@@ -89,12 +93,20 @@ class LoanRepository(Protocol):
         self, repayment_id: uuid.UUID, loan_id: uuid.UUID
     ) -> LoanRepayment | None: ...
 
+    async def get_repayment_for_loan_for_update(
+        self, repayment_id: uuid.UUID, loan_id: uuid.UUID
+    ) -> LoanRepayment | None: ...
+
     async def update_repayment(
         self, repayment: LoanRepayment) -> LoanRepayment: ...
 
 
 class LoanDecisionRepository(Protocol):
     async def get_for_user(
+        self, loan_id: uuid.UUID, user_id: uuid.UUID
+    ) -> Loan | None: ...
+
+    async def get_for_user_for_update(
         self, loan_id: uuid.UUID, user_id: uuid.UUID
     ) -> Loan | None: ...
 

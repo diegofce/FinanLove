@@ -1,3 +1,4 @@
+import asyncio
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
@@ -104,6 +105,51 @@ async def test_transaction_idempotency_and_payload_conflict(
     )
     assert conflict.status_code == 409
     assert conflict.json()["detail"] == "Idempotency key payload conflict"
+
+
+@pytest.mark.asyncio
+async def test_transaction_same_key_concurrent_creates_one_movement(
+    http_client: AsyncClient,
+) -> None:
+    token = await register_and_login(http_client)
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Idempotency-Key": "concurrent-transaction-1",
+    }
+    account = await http_client.post(
+        "/api/v1/accounts",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": f"Concurrent {uuid4().hex[:8]}",
+            "account_type": "BANK",
+            "currency": "COP",
+            "current_balance": "100.00",
+        },
+    )
+    assert account.status_code == 201
+    account_id = account.json()["id"]
+    payload = {
+        "account_id": account_id,
+        "transaction_type": "EXPENSE",
+        "amount": "80.00",
+        "description": "same concurrent request",
+    }
+
+    first, second = await asyncio.gather(
+        http_client.post("/api/v1/transactions",
+                         headers=headers, json=payload),
+        http_client.post("/api/v1/transactions",
+                         headers=headers, json=payload),
+    )
+
+    assert {first.status_code, second.status_code} == {201}
+    assert first.json()["id"] == second.json()["id"]
+    accounts = await http_client.get(
+        "/api/v1/accounts", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert accounts.status_code == 200
+    owned = next(item for item in accounts.json() if item["id"] == account_id)
+    assert owned["current_balance"] == "20.00"
 
 
 @pytest.mark.asyncio
